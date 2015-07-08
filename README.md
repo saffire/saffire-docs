@@ -1,2 +1,5 @@
-# saffire-manual
-Some text about the internals
+# Saffire Internals / Manual
+
+Documentation about Saffire and its internals
+
+[Start here](internal/intro.md)
