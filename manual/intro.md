@@ -13,3 +13,9 @@ I try to be consistent with the terminology through these readings. To make thin
   <dt>Object</dt>
   <dd>Many elements within the Saffire core are internally represented by objects. Objects in this context has got nothing to do with Object Oriented Programming. Within Saffire userland, I will try and talk about classes and instances so there is no confusing with core objects.</dd>
 </dl>
+
+
+- Part 1: [Saffire Phases](phases.md)
+- Part 2: [Saffire Objects]
+- Part 3: [Saffire Execution]
+- Part 4: [Saffire VM]
