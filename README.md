@@ -2,4 +2,4 @@
 
 Documentation about Saffire and its internals
 
-[Start here](internal/intro.md)
+[Start here](manual/intro.md)
