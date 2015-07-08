@@ -16,6 +16,6 @@ I try to be consistent with the terminology through these readings. To make thin
 
 
 - Part 1: [Saffire Phases](phases.md)
-- Part 2: [Saffire Objects]
+- Part 2: [Saffire Objects](objects.md)
 - Part 3: [Saffire Execution]
 - Part 4: [Saffire VM]
