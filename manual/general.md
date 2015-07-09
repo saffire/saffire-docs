@@ -1,0 +1,69 @@
+# General functionality
+There are many support functionality within Saffire. Mostly based in the `src/components/general` directory.
+
+- Hashtables / hashmaps
+- Base64 encode/decode
+- Bzip2 compressor
+- Double linked lists (DLL)
+- Mutex and semaphores
+- Output handling
+- Option parsers
+- Path handling
+- Stacks based on DLL's
+- String functionality
+- Unicode (UTF8) functionality
+
+
+## Hash tables
+A hash table (`src/components/general/hash.c`) is a way to simply create hash tables. They are used a lot within Saffire, inside core objects, and even Saffire's userland hash class is nothing more than a wrapper around a hash table.
+
+Creating and using a hashtable is easy:
+
+     t_hash_table *ht = ht_create();
+     ht_add_str(ht, "foo", "bar");
+     
+     char *value = ht_find_str(ht, "foo");
+     printf("%s\n", value); // bar
+
+By default, whatever you store inside a hash-table is a `void *`, so you have to be careful storing numerical values, as numerical values can be larger than a pointer address (we still need ot make sure this all works correctly in a platform / compiler agnostic way).
+
+We can store anything we like (it's up to the caller to make sure it knows what it can expect as value), but there are a few different ways to store keys. A key could either be a string, a numerical value, or an object.
+
+To make things more generic, one must use a `t_hash_key` structure to define the actual key, but to make things more comfortable, there are `ht_add_str`, `ht_add_num`, and `ht_add_obj` methods that will deal with this so you won't have to.
+
+Iterating a hashtable is possible too:
+
+    t_hash_iter iter;
+    ht_iter_init(&iter, ht);
+
+    while (ht_iter_valid(&iter)) {
+        t_hash_key *k = ht_iter_key(&iter);
+        t_object *v = (t_object *)(ht_iter_value(&iter));
+        
+        ht_iter_next(&iter);
+    }
+    
+Since iteration data is located within the t_hash_iter structure, it's possible to have multiple iterations independently and interwoven. However, there could be issues when hashtables are modified during iteration.
+
+
+
+## Doubly Linked Lists
+DLLs are simple data structure that are fast for sequential reads. They again are used a lot in the core, and the tuple userland class uses this structure internally.
+
+
+	t_dll *dll = dll_init();
+	dll_append(dll, "foo");
+	dll_append(dll, "bar");
+	
+There are additional functions to insert (quickly) in different spots with the help of t_dll_element values.
+
+Iterating can be done through some simple macro's:
+
+    t_dll_element *e = DLL_HEAD(my_dll);
+    while (e) {
+       char *s = e->data.p;
+       
+       e = DLL_NEXT(e);
+    }
+
+An element uses either `e->data.p` for pointers, and `e->data.l` for numerical values. Again, it's imperative that the called knows what is stored.

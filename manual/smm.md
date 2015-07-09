@@ -1,0 +1,10 @@
+# Saffire Memory Manager
+At this moment, there is no real memory manager that takes care of memory management. There is no real reason for it now, however, we might need it later on.
+
+This is why there are `smm_*` functions that deal with this, which can be found in `src/components/general/smm.c`. It defines functions like `smm_malloc()`, `smm_free()` etc, which internally just call `malloc()` and `free()`.
+
+A nice feature is that we can easily see how much memory we are internall using (we can keep books through smm_malloc etc). We could even create different groups for allocation: for instance, buffers, strings, objects, generic etc, so we have a nice overview on how much memory we use on strings, how much on creating objects, how much on using (memory) buffers etc.
+
+Make sure you always use the `smm_malloc()` function instead of `malloc()`. Some C functions will use `malloc()` internally to create buffers. On those occasions either must duplicate the buffer into a `smm_malloc()` one, or just deal with the fact that we miss some memory in our bookkeeping later on.
+
+The SMM_* functionality also means we can easily create our own custom (slab) allocator later on.

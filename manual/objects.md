@@ -4,7 +4,7 @@ Inside the core, most things are represented by objects. There are not objects i
 
 An object is nothing more than a `struct _object` structure which is heavily modelled on Python. This structure can be found in `include/objects/object.h`.
 
-A `t_object` has by default just a header and a footer. It's imperative to use the macro defines for this `SAFFIRE_OBJECT_HEADER` and `SAFFIRE_OBJECT_FOOTER`. This is because these macro's can depend on the way saffire is compiled (with or without debug information for instance).
+A `t_object` has by default just a header and a footer. It's imperative to use the macro defines for this `SAFFIRE_OBJECT_HEADER` and `SAFFIRE_OBJECT_FOOTER`. This is because these macro's can depend on the way saffire is compiled (with or without debug information for instance), but it also allows for much easer changing of all objects. For instance, when adding additional properties or flags (which may or may not happen in the future).
 
 ## The object header
 The header consists of the following:
@@ -225,7 +225,7 @@ Adding constants or properties to core classes work the same way, except it uses
 One thing to realize is that when adding interfaces, you must implement all methods of these interfaces manually, AND add the actual interface with `object_add_interface`. There is no check to see if you have implmented all method for the interface, except when instantiating the class.
 
 
-## defining internal methods
+## Defining internal methods
 
 Internal methods from objects should have the following signature
 
@@ -306,3 +306,146 @@ Reference count is a easy way to keep track on which objects are in use, and whi
 As soon as the refcount hits zero, we know that no more variables are using this object, and it can be safely removed (it works with all type of objects, instances and classes, although classes are not really released due to the fact that they are attached to the frame, which gives them a refcount of at least 1.
 
 It works well, except when there are cyclic references:  A points to B, B points to C, C points to A. Now, if there are no references to A, B and C, these objects still reference eachother in a cycle. Saffire will not be able to free the memory as their refcounts are not zero. This "cyclic" reference check is something that is not yet implemented (which should live inside the garbage collector system). There are many different algorithms available for this kind of work.
+
+Dealing with the reference count is harder than expected. Many functionality will increase/decrease reference counts. For instance, when we create a userland class, this class has no reference count, as it is not referenced through any variables. At this point, the VM pushes the new object onto the VM stack, which in turn will increase the reference count to 1. 
+
+The next code could (almost likely) something like `VM_STORE_ID`, which stores the given element on the stack into the given ID. This is how it works when we do something like `a = MyClass()`.  When `VM_STORE_ID` starts, it pops the element from the stack, but we have to be carefull when to decrease the reference count. 
+
+Suppose the flow would be (in pseudocode):
+
+    function vm_store_id($id) {
+      object = pop_from_stack();
+      decrease_refcount(object);
+       
+      id->value = object;
+      increase_refcount(object);
+    }    
+    
+First of all, optimization would be to not mess with the reference count: we decrease it and a (u)second later, we increase it again.
+
+But if the object had a refcount of 1, the `decrease_refcount()` function would decrease it to 0, which means it gets scheduled for freeing up memory. We have no way of knowing that the object after the `decrease_refcount()` still is available (the memory free could have happend during `decrease_refcount` if we REALLY needed the memory for instance).
+
+Instead, we must wait for decreasing the reference count until we are certain we cannot hit 0:
+
+    function vm_store_id($id) {
+      object = pop_from_stack();
+       
+      id->value = object;
+      increase_refcount(object);
+      
+      // Decrease count from the stack
+      decrease_refcount(object);      
+    }    
+  
+  At this point, we decrease the refcount at the end, so we end up with a refcount of 2 for a split second. This is ok, as nothing in between can happen (although, it might with threads maybe??). At this point, it's also quite visible to not do anything with the refcount to begin with as both operations cancel eachother out at best, or destroys the object in the worst case.
+  
+***@TODO: Maybe there should be a mechanism to "lock" an object when it's in use, but not referenced by anything. This is basically what the refcount already is, so I guess we can still (ab)use it, provided that for some short periods the refcount can be off (but only with higher refcounts, not lower refcounts)***
+
+Always(!) use the `object_inc_ref()` and `object_release()`. There is also an `object_dec_ref()` which is the main decrease function. The `object_release()` function just calls this function, but it's a better name (we are releasing an object, we do not care how this works internally).
+
+To make things more symetrical, we should get rid of the `object_inc_ref()` and give it another name like `object_lock()` or something. I haven't found a good enough name yet.
+
+Some objects will not be freed when the refcount hits 0: most notable the callable and attrib objects. This is mostely because of wrong usage of reference counting in the saffire core itself. Until this is really fixed, we ignore this.
+
+
+
+## Dealing with objects
+
+Dealing with objects happens through the object_* methods found in `object.c`. These methods will call any underlying specific object functions if needed.
+
+So releasing an object is simply calling `object_release()`, cloning an object should be done through `object_clone()`. 
+
+Notice that all these functions use the `t_object *` structure, not any specific class structure like `t_string_object *`.
+
+
+##### int object_instance_of(t_object *obj, const char *instance)
+Checks if the given object is an instance of the given instance (given as a string). It will check parents as well, so `object_instance_of(obj, "base")` will always return true, as all objects are based on this base object.
+
+##### void object_inc_ref(t_object *obj)
+Increase the reference count on the object.
+
+##### long object_dec_ref(t_object *obj);
+Decreases the refcount. When the refcount hits 0, it will call `_object_free()` to free up the object.
+
+##### static void _object_free(t_object *obj)
+This function does a few things:
+
+* Sanity check to see if freeing is possible (refcount should be 0)
+* Free the attribute objects
+* Free the interfaces, if any
+* Call the "free" function from the object-function table to clean up any internal data (like the locale and unicode values for a string object
+* If the class is a userland class, release the parent class (not needed for core classes, as they are not allocated but defined in their structure)
+* If the object is allocated (userland objects, and most instances, except core instances like null, boolean true and boolean false), we will free the name of the class
+* We call `destroy` function from the object-function table that will actually destroy the object. Most likely this will just call `smm_free()` on the actual object.
+
+##### char *object_debug(t_object *obj)
+The object_debug function is only available when saffire is compiled in debug mode. It will call the "debug" function from the object table, which most likely creates a string and places this inside the object's footer structure (`__debug_info`). Then, this is returned so it can be used for printing. 
+
+A tricky way, but done so because otherwise we run into issues when trying to print debug information for multiple objects in the same `printf()` line for instance.
+
+##### t_object *object_clone(t_object *obj)
+`object_clone()` returns a new cloned object from the source by calling the `clone()` function form the object function table. If no `clone()` function is defined, it will return itself.
+
+##### object_get_hash()
+Returns the hash of a object. If no `hash()` function is defined in the object's function table, it uses the address of the object as the return value. 
+
+
+##### t_hash_table *object_duplicate_attributes(t_object *class_obj, t_object *instance_obj)
+##### t_object *object_alloc_args(t_object *obj, t_dll *arguments, int *cached) {
+##### int object_parse_arguments(t_dll *dll, const char *spec, ...)
+
+
+##### object_free_internal_object
+This method cleans up internal objects by removing all attributes and interfaces. Basically it cleans up everything that is allocated within the `init()` methods of the actual internal objects.
+
+
+##### object_raise_exception
+Creates a new exception. It's a wrapper around `thread_create_exception()` and both are still used mixed together.
+
+_object_check_matching_arguments
+
+_object_check_interface_implementations
+##### object_check_interface_implementations
+This checks if an object has implemented all methods for all the interfaces it has implemented. It will iterate all interface, and calls `_object_check_interface_implementations()`. When something is wrong, it will throw an exception on the thread and return 0. Otherwise, it will return 1.
+
+#### object_has_interface
+Simply checks if the given object has the given interface. (will not check in parent classes though)
+
+##### t_object *object_alloc_class(t_object *obj, int arg_count, ...);
+This function is called only when creating a userland class based on the given object (which also must be a class, but since there is no real difference between classes and instances from a core perspective, we could also create an instance from another instance theoretically). It does nothing more than calling `object_alloc_args` with the given arguments.
+
+##### t_dll *object_duplicate_interfaces(t_object *instance_obj) {
+Duplicates the interfaces of the given object. It duplicates the DLL, but also make sure the reference count of all interfaces on that list gets increased. This is needed, so when the object gets freed, can simply free the interfaces. This means that the interfaces list is NOT SHARED between instances, which might be a nice solution, because only when a class gets freed, we have to free the interfaces, since we cannot get a class freed before all instances are gone (because an instance increases the refcount of the given class!).  
+
+
+##### t_object *object_alloc_class(t_object *obj, int arg_count, ...);
+Allocates a new class. It does not much more than calling `object_alloc_args()` with the given argument list nicely packed in a DLL.
+
+##### t_object *object_alloc_instance(t_object *obj, int arg_count, ...);
+Allocates a new instance. First, it calls `object_alloc_args()` with the given argument list nicely packed in a DLL just like in `object_alloc_class()`. It MIGHT be possible that `object_alloc_class()` does not really return a new allocated class, but simply returned a pre-allocated class. Some internal classes might do this: the numerical classes will pre-initialize the numbers -5 to 256, so when we call `object_alloc_args()` on the numerical class object, with argument 10, it does not have to allocate a new class and load the number 10 in it, but simply return the cached version. 
+
+If a cached version is returned, we do not have to instantiate the object, but otherwise, it will call `object_instantiate()`.
+
+##### void object_instantiate(t_object *instance_obj, t_object *class_obj) {
+"Converts" an object into an instance by setting the correct object flat (OBJECT_TYPE_INSTANCE). It also duplicates all attributes into the new instance and duplicates all interfaces. We talk about why later.
+
+##### t_object *object_alloc_args(t_object *obj, t_dll *arguments, int *cached) {
+Creates a new object based on the given object, with specified arguments.
+
+First, it must be a class (although technically not a requirement, because the core does not really care about the difference between classes and instances. They are all objects from the core's perspective.
+
+If the given object does not have an object function table, it will return the NULL instance. This implies we cannot really instantiate the class, and maybe a better way would be to throw an exception instead of returning a really strange value.
+
+When the object function table has the `cache()` method, it will call this to see if we can find a cached version for the given arguments. This allows us to quickly find cached versions of numerical objects, but could also be used to cache the last 100 string objects, so when we need to use them again, we do not need to allocate them again (not implemented yet though). If a cached object is found, it will return this cached object.
+
+Otherwise, it will allocate memory for the new object, which is the size of a standard t_object PLUS the data_size field in the object. This is needed to make sure we also add the memory for the extra fields, like the locale, string and unicode pointers in a string, or the long value of a numerical object.
+
+Then, we simply copy over all values by a `memcpy`. Since we allocated this class, we set the `CLASS_FLAG_ALLOCATED` flag in the new class so it will know that this class must be freed when not used anymore.
+
+Often (but not always, to complicate matters), the name of the class is allocated. Because we memcopied the data, we also copied the same address pointer for the name. This gives issues when we either free this new object, or any other object based on the main object. This is why we actually do a `strdup()` of the name so we can safely free it later.
+
+There could possible be more data that we need to duplicate. For numerical objects, we do not need this: it only got a `long value` as additional data, and this can be easily memcopied and used. However, for strings, we need to duplicate the locale, unicode and string itself otherwise we run into the same trouble as with the name field. This is done through calling the `populate()` function found in the object  function table.
+
+
+
+## Duplicating attributes
