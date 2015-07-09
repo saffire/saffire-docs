@@ -1,4 +1,7 @@
+author: Joshua Thijssen
+email: jthijssen@saffire-lang.org
 highlighter: pygments
 github: [Repository metadata]
 permalink: /:categories/:title.html
-url: http://saffire.github.com/saffire-docs
+baseurl: "/saffire-docs/"
+url: http://saffire.github.com
