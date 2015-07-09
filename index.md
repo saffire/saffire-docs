@@ -20,7 +20,7 @@ I try to be consistent with the terminology through these readings. To make thin
 
 ## Table of Contents
 {% for post in site.posts reversed %}
-  - [ {{ post.title }} ]({{ post.url }})
+  - [ {{ post.title }} ]({{ post.url | prepend: site.baseurl }})
 {% endfor %}
 
 
