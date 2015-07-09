@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  
+<meta charset='utf-8'>
+<meta http-equiv="X-UA-Compatible" content="chrome=1">
+
+<!-- CSS -->
+<link href='https://fonts.googleapis.com/css?family=Chivo:900' rel='stylesheet' type='text/css'>
+<link rel="stylesheet" type="text/css" href="/stylesheets/stylesheet.css" media="screen" />
+<link rel="stylesheet" type="text/css" href="/stylesheets/pygment_trac.css" media="screen" />
+<link rel="stylesheet" type="text/css" href="/stylesheets/print.css" media="print" />
+
+<!--[if lt IE 9]>
+<script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+<![endif]-->
+
+<title>Modules</title>
+
+
+</head>
+
+<body>
+  <div id="container">
+      <img src="http://saffire-lang.org/images/logo.png" align="right">
+    <div class="inner">
+      <header>
+        <h1><a href="/"></a></h1>
+      </header>
+
+      <section id="main_content">
+        <header class="post-header">
+    <h1>Modules</h1>
+    <p class="meta">Jan 1, 2015 • Joshua Thijssen</p>
+</header>
+
+<p>Modules are seen as standalone packages which can either function on it’s own as an application, but more likely, be part of a larger application. A module can consist of other modules (which in turn can consist of others etc).</p>
+
+<p>A module can be any of the following:</p>
+
+<ul>
+  <li>A saffire source file <code>*.sf</code>.</li>
+  <li>A saffire bytecode file <code>*.sfc</code>.</li>
+  <li>A binary module <code>*.so</code>.</li>
+</ul>
+
+<p>The first two are relatively easy to create. The third one makes use of the Saffire API system, that allows you to easily create modules in C. This way, you can create extensions to processing things much faster, or just wrap existing C libraries in a Saffire class.</p>
+
+<p>The saffire extensions repository shows a few of these modules, including a hello-world module that can be imported and used.</p>
+
+<h2 id="namespacing">Namespacing</h2>
+
+<h2 id="semantic-versioning">Semantic versioning</h2>
+<p>Saffire packages should adhere the semantic versioning (semver) method of <code>major.minor.build</code>. For more information, see the <a href="semver.org">semver website</a>.</p>
+
+<p>A complete package url could be something like:</p>
+
+<pre><code>	vendor/json@1.2.3
+</code></pre>
+
+<p>Meaning module <code>json</code> from vendor <code>jaytaph</code> on version <code>1.2.3</code>.</p>
+
+<h2 id="versioning">Versioning</h2>
+<p>There is an issue with package versioning. Suppose we have three modules, <code>A</code>, <code>B</code> and <code>C</code>.</p>
+
+<p>Our application uses module <code>vendor/A@1.0.0</code> and <code>vendor/C@1.2.0</code>.</p>
+
+<p>Now, module A itself requires too module C, however, a different version <code>2.0.0</code> for instance.</p>
+
+<p>This can cause issues in resolving our dependencies, as Saffire needs to install both C on version 1.2.0, AND C on version 2.0.0.</p>
+
+<p>We are thinking about resolving this issue by actually installing both packages:</p>
+
+<pre><code>./modules/vendor/A-1.0.0
+./modules/vendor/C-1.2.0
+./modules/vendor/C-2.0.0
+</code></pre>
+
+<p>Now, all we need to do, is make sure that whenver we import module C inside our code, it uses <code>C-1.2.0</code>. When module A imports module C, it must know that we are looking at module C-2.0.0.</p>
+
+<p>This is a big todo, but relatively easy, as we can figure this out during the IMPORT of a module.</p>
+
+
+      </section>
+      <footer>
+        
+tactile-theme is maintained by <a href="https://github.com/jasonlong">jasonlang</a><br/>
+jekyll-tactile-theme is maintained by <a href="https://github.com/ankur-gupta">ankur-gupta</a><br/>
+
+      </footer>
+    </div>
+  </div>
+</body>
+
+</html>

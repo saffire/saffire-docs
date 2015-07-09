@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  
+<meta charset='utf-8'>
+<meta http-equiv="X-UA-Compatible" content="chrome=1">
+
+<!-- CSS -->
+<link href='https://fonts.googleapis.com/css?family=Chivo:900' rel='stylesheet' type='text/css'>
+<link rel="stylesheet" type="text/css" href="/stylesheets/stylesheet.css" media="screen" />
+<link rel="stylesheet" type="text/css" href="/stylesheets/pygment_trac.css" media="screen" />
+<link rel="stylesheet" type="text/css" href="/stylesheets/print.css" media="print" />
+
+<!--[if lt IE 9]>
+<script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+<![endif]-->
+
+<title>Objects</title>
+
+
+</head>
+
+<body>
+  <div id="container">
+      <img src="http://saffire-lang.org/images/logo.png" align="right">
+    <div class="inner">
+      <header>
+        <h1><a href="/"></a></h1>
+      </header>
+
+      <section id="main_content">
+        <header class="post-header">
+    <h1>Objects</h1>
+    <p class="meta">Jan 1, 2015 • Joshua Thijssen</p>
+</header>
+
+<h1 id="objects">Objects</h1>
+
+<p>Inside the core, most things are represented by objects. There are not objects in the standard OOP way. From a Saffire userland perspective, we talk about classes and instances instead of classes and objects so not to be confused between core objects and userland objects.</p>
+
+<p>An object is nothing more than a <code>struct _object</code> structure which is heavily modelled on Python. This structure can be found in <code>include/objects/object.h</code>.</p>
+
+<p>A <code>t_object</code> has by default just a header and a footer. It’s imperative to use the macro defines for this <code>SAFFIRE_OBJECT_HEADER</code> and <code>SAFFIRE_OBJECT_FOOTER</code>. This is because these macro’s can depend on the way saffire is compiled (with or without debug information for instance), but it also allows for much easer changing of all objects. For instance, when adding additional properties or flags (which may or may not happen in the future).</p>
+
+<h2 id="the-object-header">The object header</h2>
+<p>The header consists of the following:</p>
+
+<pre><code>long ref_count;
+t_objectype_enum type;          
+char *name;
+int flags; 
+t_object *class;
+t_object *parent;
+t_dll *interfaces;              
+t_hash_table *attributes;       
+t_object_funcs *funcs;          
+int data_size;
+struct _vm_stackframe *frame;  
+</code></pre>
+
+<dl>
+  <dt>long ref_count;</dt>
+  <dd>The number of variables that refer to this object. This also counts if the object is placed on the VM stack. If 0, it means that no variables within Saffire userland refers to this object, and it could be garbage collected to free up memory.</dd>
+  <dt>t_objectype_enum type;</dt>
+  <dd>The type of the given object. Based on the type, there can be additional information within the object's structure</dd>
+  <dt>char *name;</dt>
+  <dd>The name of the object (ie: "string", "numerical", "boolean", "regex", "user", "base")</dd>
+  <dt>int flags;</dt>
+  <dd>Object flags (see below)</dd>
+  <dt>t_object *class;</dt>
+  <dd>If the object is an instance, this value will point to the actual class. For instance, a string instance will always point to the actual string class object.</dd>
+  <dt>t_object *parent;</dt>
+  <dd>If the class extends another class, it will point to the parent CLASS object.</dd>
+  <dt>t_dll *interfaces;</dt>
+  <dd>A doubly linked list of all interface objects that this object inherits</dd>
+  <dt>t_hash_table *attributes; </dt>
+  <dd>A hashtable of all attributes within the object (properties, constants and methods)</dd>
+  <dt>t_object_funcs *funcs;</dt>
+  <dd>A function table with housekeeping functions, could be NULL, or any of the housekeeping functions could be zero.</dd>
+  <dt>int data_size;</dt>
+  <dd>The size of the data within the structure. For instance, a numerical object keeps a additional long value that represents its value, thus the data_size of a numerical object is 8 (long, could be 4 on smaller platforms)</dd>
+  <dt>struct _vm_stackframe *frame;</dt>
+  <dd>The stackframe in which the (userland) class or instance has been initialized. Will be null for core objects and is only relevant for userland classes.</dd>
+</dl>
+
+<h3 id="object--flags">Object  flags</h3>
+<p>The object flags is a bitmask of the following constants:</p>
+
+<pre><code>#define OBJECT_TYPE_CLASS         1            /* Object is a class */
+#define OBJECT_TYPE_INTERFACE     2            /* Object is an interface */
+#define OBJECT_TYPE_ABSTRACT      4            /* Object is an abstract class */
+#define OBJECT_TYPE_INSTANCE      8            /* Object is an instance */
+#define OBJECT_TYPE_MASK         15            /* Object type bitmask */
+
+#define OBJECT_TYPE_USERLAND   4096            /* Object is a userland generated class */
+
+#define OBJECT_FLAG_IMMUTABLE     16           /* Object is immutable */
+#define OBJECT_FLAG_ALLOCATED     32           /* Object can be freed, as it is allocated through alloc() */
+#define OBJECT_FLAG_FINAL         64           /* Object is finalized */
+#define OBJECT_FLAG_MASK         112           /* Object flag bitmask */
+</code></pre>
+
+<p>Some settings are mutually exclusive: for instance, an object cannot be a class (1) and an instance (8) at the same time. It can be a abstract class (4) and a class (1) at the same time.</p>
+
+<p>Classes and the corresponding instances always have the <code>OBJECT_TYPE_USERLAND</code> bit set. Some objects are immutable, which can be used to make sure that nothing can change any properties of the object. The <code>OBJECT_FLAG_ALLOCATED</code> means that the object can be freed. This is not always the case, as some core objects (both classes and instance) are created with the source (for instance, all core classes, and the boolean instance <code>true</code> and the boolean instance <code>false</code>). The garbage collector must never free these values, as they are not allocated to begin with (to be honest, it should be done better as they should be initialized with a refcount 1, so it will never ever reach refcount 0 and thus will never be attempted to be freed).</p>
+
+<h2 id="the-object-footer">The object footer</h2>
+<p>Depending wether or not Saffire is compiled with debug info, the footer looks like this:</p>
+
+<pre><code>char __debug_info_available;
+char __debug_info[DEBUG_INFO_SIZE];
+</code></pre>
+
+<p>Without debug information, it looks like this:</p>
+
+<pre><code>char __debug_info_available;
+</code></pre>
+
+<p>Note the missing <code>__debug_info</code> field. When <code>__debug_info_available</code> is set to 1, it means that the field is available, otherwise, it is not (and reading/writing to it result in garbage). The reason the footer is present is to have a more generic way to print debug information about an object (for instance, <code>"numerical(0)"</code>, <code>"boolean(false)"</code> <code>"User[myclass]"</code>, <code>"hash(5 elements)"</code> etc. We placed this at the end, so t_objects compiled without debug do not have this information and still can decently reference everything else.</p>
+
+<h2 id="core-objects">Core objects</h2>
+<p>Saffire defines some core objects. These objects are mostly saffire userland classes, but some of them are also instances. For instance, the boolean class exist, but also the boolean instance <code>true</code>, the boolean instance <code>false</code>, and the <code>null</code> interface (there is no <code>null</code> class).</p>
+
+<p>It’s not possible to extend the <code>boolean</code> class, as it is internally declared final, and it does not have a <code>__ctor</code>, so it cannot be initialized.</p>
+
+<ul>
+  <li>
+    <p>attrib</p>
+
+    <p>Represents an attribute object. This is purely an internal core object and cannot be used within saffire userland.</p>
+  </li>
+  <li>
+    <p>base</p>
+
+    <p>A base class on which every single class is based on (ultimately). It contains functionality that is available in all classes (like <code>__refcount()</code>, <code>__id()</code>, <code>__methods()</code>, etc. </p>
+  </li>
+  <li>
+    <p>boolean</p>
+
+    <p>A boolean class and the <code>true</code> and <code>false</code> instances.</p>
+  </li>
+  <li>
+    <p>callable</p>
+
+    <p>Mostly a core object, but could be potentially used outside in userland as well. Represent something that can be called. This could also be internal code. For instance, all core objects have methods that are defined as callables with internal code. This way, we can generically work and even mix core functionaly written in C, and userland code and even extend core classes like “string” with additional functionality.</p>
+  </li>
+  <li>
+    <p>exception</p>
+
+    <p>A base exception class.</p>
+  </li>
+  <li>
+    <p>hash
+A representation of a hash-table</p>
+  </li>
+  <li>
+    <p>list
+A representation of a doubly linked list</p>
+  </li>
+  <li>
+    <p>null
+A generic null instance (not a class).</p>
+  </li>
+  <li>
+    <p>numerical
+A numerical class that represents a numerical value (integers only)</p>
+  </li>
+  <li>
+    <p>regex
+A regular expression class</p>
+  </li>
+  <li>
+    <p>string
+A string object holds a string value, a length, a unicode (utf8) representation and a locale. This way, you can even mix locales togehter (order a list of german strings, and a list of spanish strings, which have different ordering)</p>
+  </li>
+  <li>
+    <p>tuple
+A linked list of values that cannot be mutated after creation.</p>
+  </li>
+</ul>
+
+<h3 id="object-funtions">Object funtions</h3>
+
+<pre><code>typedef struct _object_funcs {
+    void (*populate)(t_object *, t_dll *);      // Populates an object with new values
+    void (*free)(t_object *);                   // Frees objects internal data and places it onto gc queue
+    void (*destroy)(t_object *);                // Destroys object. Don't use object after this call!
+    t_object *(*clone)(t_object *);             // Clone this object to a new object
+    t_object *(*cache)(t_object *, t_dll *);    // Returns a cached object or NULL when no cached object is found
+    char *(*hash)(t_object *);                  // Returns a string hash (prob md5) of the object
+    char *(*debug)(t_object *);                 // Return debug string (value and info)
+} t_object_funcs;
+</code></pre>
+
+<p><code>populate()</code> populates a given object (which is an instance) with the given arguments as found in the DLL. This is NOT the constructor though, but it mostly used for creating instances from within the core. From the userland, populate will not be used, but simply the <code>__ctor()</code> method will be called which will set values on the properties. The <code>__populate</code> is the way to set values in the internal data structure of classes. </p>
+
+<p><code>free()</code> is used to free up any internal data. For instance, the string object will free the unicode, locale and string values.</p>
+
+<p><code>destroy()</code> will actually destroy (free if possible) the given object and cannot be used or references afterwards.</p>
+
+<p><code>clone()</code> is the internal core way to duplicate the given object. It will mostly clone the internal data structure.</p>
+
+<p><code>cache()</code> is a way to quickly create an object from a cache. For instance, there could be a list of the 100 last generated string objects that are still available in memory. When a new instance is generated, the <code>cache()</code> function could check the cache and return a match. This way, it does not have call <code>__populate</code> in order to populate a new object but can reuse old ones.
+It is used a lot for numerical values, where the first 256 numericals are pre-instantiated as these values are quite commonly used.</p>
+
+<p><code>hash()</code> returns a hash of an object, mostly for matching purposes.</p>
+
+<p><code>debug()</code> is only available when compiled with debug information. Since this information is used in many different context, it will actually generate the debug string within the object (in the <code>__debug_info</code> found in the object footer) and return its address.</p>
+
+<p>Its possible that the function entry table, or even a specific function is set to NULL.</p>
+
+<h2 id="initializing-the-core-objects">Initializing the core objects</h2>
+<p>All the core objects are initialized through <code>object_init()</code> method as found in <code>src/components/objects/object.c</code>.</p>
+
+<p>It will call each of the core functions, starting with attrib_object, because it is needed for generating callable objects, which in turn are needed to create every other object. It’s imperative that attrib objects do not have any callables (methods, basically), as those are not initialized at that point.</p>
+
+<p>Initialization of an object is a two-way system. The first step is to define the actual structure (for instance, <code>t_string_object Object_String_struct</code> in the <code>src/components/objects/string.c</code> file. This uses a macro called <code>OBJECT_HEAD_INIT()</code> to initialize the t_object data structure. </p>
+
+<p>However, a string object is not a <code>t_object</code>, but a <code>t_string_object</code>, has more data fields. However, it’s imperative that it is defined with a <code>SAFFIRE_OBJECT_HEADER</code> at the start, and a <code>SAFFIRE_OBJECT_FOOTER</code> at the end. You can see this happen in <code>include/objects/string.h</code>: </p>
+
+<pre><code>typedef struct {
+    t_string *value;            // string value
+    md5_byte_t hash[16];        // (MD5) hash of the actual string
+    int needs_hashing;          // 1 : string needs hashing, 0 : hash done
+
+    int iter;                   // Simple iteration index on the characters
+    char *locale;               // Locale
+} t_string_object_data;
+
+typedef struct {
+    SAFFIRE_OBJECT_HEADER
+    t_string_object_data data;
+    SAFFIRE_OBJECT_FOOTER
+} t_string_object;
+</code></pre>
+
+<p>The <code>t_string_object_data</code> structure is the specific data for string objects.
+Because a t_object, t_string_object, even a t_callabe_object and t_numerical_object all start with the <code>SAFFIRE_OBJECT_HEADER</code>, we can easily cast every saffire object to a generic <code>t_object</code>, provided we only use the fields in the header (otherwise the compiler would complain anyway). This makes it possible to do things like this:</p>
+
+<pre><code>t_object *returnsomething() {
+  t_string_object *obj = create_string_object_from_text("hello world");
+  return (t_object *)obj;
+}
+</code></pre>
+
+<p>We can return any type of object now, in this case, a string object. This object could for instance be pushed on the virtual machine stack, and popped later on by another vm opcode.</p>
+
+<p>It’s up to the user of an t_object to check if the object actually is a specific t_object it can work with, and cast it accordingly:</p>
+
+<pre><code>void increaseValue(t_object *object) {
+   if (object-&gt;type != objectTypeNumerical) {
+     return;
+   }
+   
+   t_numerical_object *num = (t_numerical_object *)object;
+   num-&gt;value++;
+} 
+</code></pre>
+
+<p>You will see (A LOT) of casting to and from <code>t_object *</code> in the code. Most of the time, we do not really care about the type of the object, just the fact that it is an object is sufficient. A bit of OO inside a non-oo language like C.</p>
+
+<p>Back to the initialization:</p>
+
+<p>We use the <code>OBJECT_HEAD_INIT</code> macro or one of the others: <code>OBJECT_HEAD_INIT_WITH_BASECLASS</code> if we want to initialize a class that uses something else as the <code>Base</code> object as a  parent. It’s just a simple way to not typing the data for a whole whole structure. It will set the refcount to 0, set the class to NULL, setup your object functions (if supplied), set the name (if supplied) etc. </p>
+
+<p>The only thing that is does not do, is setup any interfaces and attributes. This is done inside the init() method of each object (thus the <code>object_string_init()</code>, <code>object_numerical_init()</code> etc.</p>
+
+<p>Here, it will create a new hash-table at <code>Object_String_struct.attributes</code>. Then it will call the <code>object_add_internal_method</code> for each method with the structure, the name of the method, flags and such and finally the actual internal method that represents this method. They normally have something in the form of <code>object_string_method_ctor</code> and <code>object_string_method_upper</code>, because we use macros again for defining these functions (they all must use a certain signature header).</p>
+
+<p>The <code>object_add_internal_method()</code> can be found in <code>object.c</code> and is quite easy: it creates a callable object to the actual code (with the given flags), it creates an attribute object and links the callable to it. And finally it adds that attribute to the attributes hashtable of the object.</p>
+
+<p>Adding constants or properties to core classes work the same way, except it uses the <code>object_add_constant()</code> and <code>object_add_property</code> functions instead.</p>
+
+<p>One thing to realize is that when adding interfaces, you must implement all methods of these interfaces manually, AND add the actual interface with <code>object_add_interface</code>. There is no check to see if you have implmented all method for the interface, except when instantiating the class.</p>
+
+<h2 id="defining-internal-methods">Defining internal methods</h2>
+
+<p>Internal methods from objects should have the following signature</p>
+
+<pre><code>  SAFFIRE_METHOD(string, length)
+</code></pre>
+
+<p>where <code>string</code> is the object, and <code>length</code> the method name. It will be expanded to something like:</p>
+
+<pre><code>static t_object * object_string_method_length ( t_string_object *self, t_dll *arguments)
+</code></pre>
+
+<p>This is why inside the <code>object_string_init()</code> we use can use <code>object_string_method_length</code>, although maybe a macro define should come in handy in case we want to change the name of the methods.</p>
+
+<p>Each call will get two arguments: the actual string object (we always know it’s a string object that will be passed so we can safely use <code>t_string_object</code>, and a dll of arguments. There are no named arguments, we only work with the zero, first, second etc element from the DLL as the arguments.</p>
+
+<h3 id="parsing-object-arguments-in-internal-methods">Parsing object arguments in internal methods</h3>
+<p>We can use the arguments easily though (based on PHP parameter parsing):</p>
+
+<pre><code>SAFFIRE_METHOD(string, split) {
+   t_string_object *token_obj;
+   t_numerical_object *max_obj;
+
+   if (! object_parse_arguments(SAFFIRE_METHOD_ARGS, "s|n", &amp;token_obj, &amp;max_obj)) {
+       return NULL;
+   }
+</code></pre>
+
+<p>The <code>object_parse_arguments</code> takes the given arguments (specified by the SAFFIRE_METHOD_ARGS define, but really expand into <code>arguments</code>, a signature on what to expect, and the pointers where to store the arguments. In the example, the first argument MUST be a string, and if there is a second argument (optionally), it must be a numerical value. If it does not comply to this the function will raise an exception and we should return NULL (indicating no value has returned, and the vm should check for exceptions).</p>
+
+<p>There are few format characters that can be used:</p>
+
+<p><code>n</code>   Numerical value
+<code>N</code>   Null
+<code>s</code>   String
+<code>r</code>   Regex
+<code>b</code>   Boolean
+<code>o</code>   Any object
+<code>|</code>   Anything after this mark are optional arguments (but still must comply to the rules)</p>
+
+<p>So </p>
+
+<pre><code>object_parse_arguments(SAFFIRE_METHOD_ARGS, "sbo|nN", ...
+</code></pre>
+
+<p>accepts at least three arguments (a string, a boolean and any object in that order), and optionally a fourth numerical, and optionally a fifth NULL value.</p>
+
+<h2 id="instantiating-classes-from-userland">Instantiating classes (from userland)</h2>
+
+<p>Some classes can be easily instantiated, like the <code>hash</code> class:</p>
+
+<pre><code> a = hash();
+ a-&gt;add('foo', 'bar');
+</code></pre>
+
+<p>Same goes for strings:</p>
+
+<pre><code> a = string("hello world");
+</code></pre>
+
+<p>But there are other ways:</p>
+
+<pre><code> a = "hello world";  // Implies a string object
+ b = hash[["foo" : "bar" ]];  // Implies hash datastructure
+</code></pre>
+
+<p>These are taken care of by the bytecode (when a constant string is found in the bytecode, it will automatically generate a string instance from it, same with numbers). And datastructure are handled through the VM.</p>
+
+<p>The <code>__ctor()</code> is the constructor method, and is called whenever you “call” a class. For instance,</p>
+
+<pre><code>a = MyClass("foo", "bar");
+</code></pre>
+
+<p>will call the <code>__ctor()</code> method from the <code>MyClass</code> class, with the arguments “foo” and “bar”. If <code>MyClass</code> does not have a <code>__ctor()</code> method, the parent <code>__ctor()</code> will be called, until it reaches the <code>Base</code> class, which has a dummy <code>__ctor()</code> method. </p>
+
+<h2 id="reference-count">Reference count</h2>
+<p>Reference count is a easy way to keep track on which objects are in use, and which aren’t. As soon as an objects gets assigned to a variable, the reference count is increased with one. If it gets unset from that  variable the reference count will be decreased with one. Also, when an object gets pushed onto the VM stack, the refcount increases, when popped, it decreases again.</p>
+
+<p>As soon as the refcount hits zero, we know that no more variables are using this object, and it can be safely removed (it works with all type of objects, instances and classes, although classes are not really released due to the fact that they are attached to the frame, which gives them a refcount of at least 1.</p>
+
+<p>It works well, except when there are cyclic references:  A points to B, B points to C, C points to A. Now, if there are no references to A, B and C, these objects still reference eachother in a cycle. Saffire will not be able to free the memory as their refcounts are not zero. This “cyclic” reference check is something that is not yet implemented (which should live inside the garbage collector system). There are many different algorithms available for this kind of work.</p>
+
+<p>Dealing with the reference count is harder than expected. Many functionality will increase/decrease reference counts. For instance, when we create a userland class, this class has no reference count, as it is not referenced through any variables. At this point, the VM pushes the new object onto the VM stack, which in turn will increase the reference count to 1. </p>
+
+<p>The next code could (almost likely) something like <code>VM_STORE_ID</code>, which stores the given element on the stack into the given ID. This is how it works when we do something like <code>a = MyClass()</code>.  When <code>VM_STORE_ID</code> starts, it pops the element from the stack, but we have to be carefull when to decrease the reference count. </p>
+
+<p>Suppose the flow would be (in pseudocode):</p>
+
+<pre><code>function vm_store_id($id) {
+  object = pop_from_stack();
+  decrease_refcount(object);
+   
+  id-&gt;value = object;
+  increase_refcount(object);
+}    
+</code></pre>
+
+<p>First of all, optimization would be to not mess with the reference count: we decrease it and a (u)second later, we increase it again.</p>
+
+<p>But if the object had a refcount of 1, the <code>decrease_refcount()</code> function would decrease it to 0, which means it gets scheduled for freeing up memory. We have no way of knowing that the object after the <code>decrease_refcount()</code> still is available (the memory free could have happend during <code>decrease_refcount</code> if we REALLY needed the memory for instance).</p>
+
+<p>Instead, we must wait for decreasing the reference count until we are certain we cannot hit 0:</p>
+
+<pre><code>function vm_store_id($id) {
+  object = pop_from_stack();
+   
+  id-&gt;value = object;
+  increase_refcount(object);
+  
+  // Decrease count from the stack
+  decrease_refcount(object);      
+}    
+</code></pre>
+
+<p>At this point, we decrease the refcount at the end, so we end up with a refcount of 2 for a split second. This is ok, as nothing in between can happen (although, it might with threads maybe??). At this point, it’s also quite visible to not do anything with the refcount to begin with as both operations cancel eachother out at best, or destroys the object in the worst case.</p>
+
+<p><strong><em>@TODO: Maybe there should be a mechanism to “lock” an object when it’s in use, but not referenced by anything. This is basically what the refcount already is, so I guess we can still (ab)use it, provided that for some short periods the refcount can be off (but only with higher refcounts, not lower refcounts)</em></strong></p>
+
+<p>Always(!) use the <code>object_inc_ref()</code> and <code>object_release()</code>. There is also an <code>object_dec_ref()</code> which is the main decrease function. The <code>object_release()</code> function just calls this function, but it’s a better name (we are releasing an object, we do not care how this works internally).</p>
+
+<p>To make things more symetrical, we should get rid of the <code>object_inc_ref()</code> and give it another name like <code>object_lock()</code> or something. I haven’t found a good enough name yet.</p>
+
+<p>Some objects will not be freed when the refcount hits 0: most notable the callable and attrib objects. This is mostely because of wrong usage of reference counting in the saffire core itself. Until this is really fixed, we ignore this.</p>
+
+<h2 id="dealing-with-objects">Dealing with objects</h2>
+
+<p>Dealing with objects happens through the object_* methods found in <code>object.c</code>. These methods will call any underlying specific object functions if needed.</p>
+
+<p>So releasing an object is simply calling <code>object_release()</code>, cloning an object should be done through <code>object_clone()</code>. </p>
+
+<p>Notice that all these functions use the <code>t_object *</code> structure, not any specific class structure like <code>t_string_object *</code>.</p>
+
+<h5 id="int-objectinstanceoftobject-obj-const-char-instance">int object_instance_of(t_object *obj, const char *instance)</h5>
+<p>Checks if the given object is an instance of the given instance (given as a string). It will check parents as well, so <code>object_instance_of(obj, "base")</code> will always return true, as all objects are based on this base object.</p>
+
+<h5 id="void-objectincreftobject-obj">void object_inc_ref(t_object *obj)</h5>
+<p>Increase the reference count on the object.</p>
+
+<h5 id="long-objectdecreftobject-obj">long object_dec_ref(t_object *obj);</h5>
+<p>Decreases the refcount. When the refcount hits 0, it will call <code>_object_free()</code> to free up the object.</p>
+
+<h5 id="static-void-objectfreetobject-obj">static void _object_free(t_object *obj)</h5>
+<p>This function does a few things:</p>
+
+<ul>
+  <li>Sanity check to see if freeing is possible (refcount should be 0)</li>
+  <li>Free the attribute objects</li>
+  <li>Free the interfaces, if any</li>
+  <li>Call the “free” function from the object-function table to clean up any internal data (like the locale and unicode values for a string object</li>
+  <li>If the class is a userland class, release the parent class (not needed for core classes, as they are not allocated but defined in their structure)</li>
+  <li>If the object is allocated (userland objects, and most instances, except core instances like null, boolean true and boolean false), we will free the name of the class</li>
+  <li>We call <code>destroy</code> function from the object-function table that will actually destroy the object. Most likely this will just call <code>smm_free()</code> on the actual object.</li>
+</ul>
+
+<h5 id="char-objectdebugtobject-obj">char *object_debug(t_object *obj)</h5>
+<p>The object_debug function is only available when saffire is compiled in debug mode. It will call the “debug” function from the object table, which most likely creates a string and places this inside the object’s footer structure (<code>__debug_info</code>). Then, this is returned so it can be used for printing. </p>
+
+<p>A tricky way, but done so because otherwise we run into issues when trying to print debug information for multiple objects in the same <code>printf()</code> line for instance.</p>
+
+<h5 id="tobject-objectclonetobject-obj">t_object *object_clone(t_object *obj)</h5>
+<p><code>object_clone()</code> returns a new cloned object from the source by calling the <code>clone()</code> function form the object function table. If no <code>clone()</code> function is defined, it will return itself.</p>
+
+<h5 id="objectgethash">object_get_hash()</h5>
+<p>Returns the hash of a object. If no <code>hash()</code> function is defined in the object’s function table, it uses the address of the object as the return value. </p>
+
+<h5 id="thashtable-objectduplicateattributestobject-classobj-tobject-instanceobj">t_hash_table *object_duplicate_attributes(t_object *class_obj, t_object *instance_obj)</h5>
+<p>##### t_object *object_alloc_args(t_object *obj, t_dll *arguments, int *cached) {
+##### int object_parse_arguments(t_dll *dll, const char *spec, …)</p>
+
+<h5 id="objectfreeinternalobject">object_free_internal_object</h5>
+<p>This method cleans up internal objects by removing all attributes and interfaces. Basically it cleans up everything that is allocated within the <code>init()</code> methods of the actual internal objects.</p>
+
+<h5 id="objectraiseexception">object_raise_exception</h5>
+<p>Creates a new exception. It’s a wrapper around <code>thread_create_exception()</code> and both are still used mixed together.</p>
+
+<p>_object_check_matching_arguments</p>
+
+<p>_object_check_interface_implementations
+##### object_check_interface_implementations
+This checks if an object has implemented all methods for all the interfaces it has implemented. It will iterate all interface, and calls <code>_object_check_interface_implementations()</code>. When something is wrong, it will throw an exception on the thread and return 0. Otherwise, it will return 1.</p>
+
+<h4 id="objecthasinterface">object_has_interface</h4>
+<p>Simply checks if the given object has the given interface. (will not check in parent classes though)</p>
+
+<h5 id="tobject-objectallocclasstobject-obj-int-argcount-">t_object *object_alloc_class(t_object *obj, int arg_count, …);</h5>
+<p>This function is called only when creating a userland class based on the given object (which also must be a class, but since there is no real difference between classes and instances from a core perspective, we could also create an instance from another instance theoretically). It does nothing more than calling <code>object_alloc_args</code> with the given arguments.</p>
+
+<h5 id="tdll-objectduplicateinterfacestobject-instanceobj-">t_dll *object_duplicate_interfaces(t_object *instance_obj) {</h5>
+<p>Duplicates the interfaces of the given object. It duplicates the DLL, but also make sure the reference count of all interfaces on that list gets increased. This is needed, so when the object gets freed, can simply free the interfaces. This means that the interfaces list is NOT SHARED between instances, which might be a nice solution, because only when a class gets freed, we have to free the interfaces, since we cannot get a class freed before all instances are gone (because an instance increases the refcount of the given class!).  </p>
+
+<h5 id="tobject-objectallocclasstobject-obj-int-argcount--1">t_object *object_alloc_class(t_object *obj, int arg_count, …);</h5>
+<p>Allocates a new class. It does not much more than calling <code>object_alloc_args()</code> with the given argument list nicely packed in a DLL.</p>
+
+<h5 id="tobject-objectallocinstancetobject-obj-int-argcount-">t_object *object_alloc_instance(t_object *obj, int arg_count, …);</h5>
+<p>Allocates a new instance. First, it calls <code>object_alloc_args()</code> with the given argument list nicely packed in a DLL just like in <code>object_alloc_class()</code>. It MIGHT be possible that <code>object_alloc_class()</code> does not really return a new allocated class, but simply returned a pre-allocated class. Some internal classes might do this: the numerical classes will pre-initialize the numbers -5 to 256, so when we call <code>object_alloc_args()</code> on the numerical class object, with argument 10, it does not have to allocate a new class and load the number 10 in it, but simply return the cached version. </p>
+
+<p>If a cached version is returned, we do not have to instantiate the object, but otherwise, it will call <code>object_instantiate()</code>.</p>
+
+<h5 id="void-objectinstantiatetobject-instanceobj-tobject-classobj-">void object_instantiate(t_object *instance_obj, t_object *class_obj) {</h5>
+<p>“Converts” an object into an instance by setting the correct object flat (OBJECT_TYPE_INSTANCE). It also duplicates all attributes into the new instance and duplicates all interfaces. We talk about why later.</p>
+
+<h5 id="tobject-objectallocargstobject-obj-tdll-arguments-int-cached-">t_object *object_alloc_args(t_object *obj, t_dll *arguments, int *cached) {</h5>
+<p>Creates a new object based on the given object, with specified arguments.</p>
+
+<p>First, it must be a class (although technically not a requirement, because the core does not really care about the difference between classes and instances. They are all objects from the core’s perspective.</p>
+
+<p>If the given object does not have an object function table, it will return the NULL instance. This implies we cannot really instantiate the class, and maybe a better way would be to throw an exception instead of returning a really strange value.</p>
+
+<p>When the object function table has the <code>cache()</code> method, it will call this to see if we can find a cached version for the given arguments. This allows us to quickly find cached versions of numerical objects, but could also be used to cache the last 100 string objects, so when we need to use them again, we do not need to allocate them again (not implemented yet though). If a cached object is found, it will return this cached object.</p>
+
+<p>Otherwise, it will allocate memory for the new object, which is the size of a standard t_object PLUS the data_size field in the object. This is needed to make sure we also add the memory for the extra fields, like the locale, string and unicode pointers in a string, or the long value of a numerical object.</p>
+
+<p>Then, we simply copy over all values by a <code>memcpy</code>. Since we allocated this class, we set the <code>CLASS_FLAG_ALLOCATED</code> flag in the new class so it will know that this class must be freed when not used anymore.</p>
+
+<p>Often (but not always, to complicate matters), the name of the class is allocated. Because we memcopied the data, we also copied the same address pointer for the name. This gives issues when we either free this new object, or any other object based on the main object. This is why we actually do a <code>strdup()</code> of the name so we can safely free it later.</p>
+
+<p>There could possible be more data that we need to duplicate. For numerical objects, we do not need this: it only got a <code>long value</code> as additional data, and this can be easily memcopied and used. However, for strings, we need to duplicate the locale, unicode and string itself otherwise we run into the same trouble as with the name field. This is done through calling the <code>populate()</code> function found in the object  function table.</p>
+
+<h2 id="duplicating-attributes">Duplicating attributes</h2>
+
+
+      </section>
+      <footer>
+        
+tactile-theme is maintained by <a href="https://github.com/jasonlong">jasonlang</a><br/>
+jekyll-tactile-theme is maintained by <a href="https://github.com/ankur-gupta">ankur-gupta</a><br/>
+
+      </footer>
+    </div>
+  </div>
+</body>
+
+</html>

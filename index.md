@@ -1,3 +1,7 @@
+---
+layout: default
+---
+
 # Saffire
 This documentation is for both myself and others to get an impression on how Saffire works internally.
 
@@ -15,14 +19,10 @@ I try to be consistent with the terminology through these readings. To make thin
 </dl>
 
 ## Table of Contents
+{% for post in site.posts reversed %}
+  - [ {{ post.title }} ]({{ post.url }})
+{% endfor %}
 
-- Part 1: [Saffire Phases](phases.md)
-- Part 2: [Saffire Objects](objects.md)
-- Part 3: [Saffire Execution]
-- Part 4: [Saffire VM]
-- Part 4.1: [Modules](modules.md)
-- Part 5: [Saffire Application](application.md)
-- Part 6: [Saffire Memory Management](smm.md)
-- Part 7: [General functionality](general.md)
-- Part 8: [Strings](strings.md)
-- Part 9: [The Debugger](debugger.md)
+
+
+

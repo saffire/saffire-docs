@@ -1,3 +1,11 @@
+---
+title: Saffire Application
+layout: post
+author: Joshua Thijssen
+category: Application
+date: 2015-01-01 00:01:00
+---
+
 # Saffire application
 The general idea of Saffire was to have a single binary that will be able to do everything that is needed: run files, serve as fastcgi, do the REPL etc.
 

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  
+<meta charset='utf-8'>
+<meta http-equiv="X-UA-Compatible" content="chrome=1">
+
+<!-- CSS -->
+<link href='https://fonts.googleapis.com/css?family=Chivo:900' rel='stylesheet' type='text/css'>
+<link rel="stylesheet" type="text/css" href="/stylesheets/stylesheet.css" media="screen" />
+<link rel="stylesheet" type="text/css" href="/stylesheets/pygment_trac.css" media="screen" />
+<link rel="stylesheet" type="text/css" href="/stylesheets/print.css" media="print" />
+
+<!--[if lt IE 9]>
+<script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+<![endif]-->
+
+<title>Saffire Application</title>
+
+
+</head>
+
+<body>
+  <div id="container">
+      <img src="http://saffire-lang.org/images/logo.png" align="right">
+    <div class="inner">
+      <header>
+        <h1><a href="/"></a></h1>
+      </header>
+
+      <section id="main_content">
+        <header class="post-header">
+    <h1>Saffire Application</h1>
+    <p class="meta">Jan 1, 2015 • Joshua Thijssen</p>
+</header>
+
+<h1 id="saffire-application">Saffire application</h1>
+<p>The general idea of Saffire was to have a single binary that will be able to do everything that is needed: run files, serve as fastcgi, do the REPL etc.</p>
+
+<p>This is why saffire has different commands, where each command corresponds to either an internal or external command.</p>
+
+<h2 id="internal-commands">Internal commands</h2>
+<p>There are a few internal commands:
+- saffire exec
+- saffire config
+- saffire fastcgi
+- saffire lint
+- saffire bytecode
+- saffire version
+- saffire help</p>
+
+<h4 id="saffire-help">Saffire help</h4>
+<p>Displays help information about Saffire in general, the found commands and possible options.</p>
+
+<h4 id="saffire-version">Saffire version</h4>
+<p>Displays current Saffire version</p>
+
+<h4 id="saffire-config">Saffire config</h4>
+<p>Gets or sets configuration options for saffire. This configuration is based on .ini files, and can be either global or local. This command even has the option to generate a default configuration for you.</p>
+
+<h4 id="saffire-lint">Saffire lint</h4>
+<p>Does a lint (syntax) check on the given Saffire file.</p>
+
+<h4 id="saffire-fastcgi">Saffire fastcgi</h4>
+<p>Starts Saffire in FastCGI mode as a deamon so it can be used for nginx or other FastCGI capable webservers.</p>
+
+<h4 id="saffire-exec">Saffire exec</h4>
+<p>This is the command that will run a saffire file. </p>
+
+<p>This command is also the default when no command is found on the command line. This is why <code>./saffire test.sf</code> is equal to <code>./saffire exec test.sf</code>.</p>
+
+<p>(note that because of the way Saffire deals with precompiled files, it’s possible that when executing <code>test.sf</code>, it really loads and executes <code>test.sfc</code> if present in the same directory and when it detects that this file is still “fresh”. In fact, when running <code>./saffire test.sf</code>, you do not even have to have the <code>test.sf</code> file present in the current directory. Also, you could run <code>./saffire exec test.sfc</code> to run the sfc file (and again, when not fresh, it will fall back to <code>test.sf</code>).</p>
+
+<h4 id="saffire-bytecode">Saffire bytecode</h4>
+<p>The bytecode command deals with some internal things that can be useful on occasion. Mostly it will display information about a bytecode file (<code>.sfc</code>) through the subcommand <code>info</code>: <code>./saffire bytecode info test.sfc</code>.</p>
+
+<p>There is a <code>sign</code> and <code>unsign</code> subcommand that will sign and unsign bytecode with your key. </p>
+
+<p>And the most important subcommand is <code>compile</code>, which compiles a saffire application without actually running it. There are additional options like <code>--text</code>, which will save a <code>.sfa</code> assembler output and <code>--dot</code> which generates a representation of the AST.</p>
+
+<h2 id="external-commands">External commands</h2>
+<p>Not all commands are by default available as internal commands. It’s quite possible to have external commands that are not created as C code, but still can be useful. For instance, there is (in progress) a webserver that can serve Saffire files. With this webserver it’s quite easy to create a saffire web application without setting up Nginx and a FastCGI system. This webserver is completely written in Saffire itself.</p>
+
+<p>External commands can be found on the command path (by default <code>/usr/lib/saffire/commands</code>), and start with <code>saffire-&lt;command&gt;</code>. Thus, the webserver would be available as <code>/usr/lib/saffire/commands/saffire-webserver</code>, and can be run as <code>./saffire webserver &lt;webserver_options&gt;</code>. Saffire will automatically detect this as an external command and load the correct file.</p>
+
+<p>It’s possible to not only create external commands with userland Saffire code, but even other languages, (even shell scripts) and precompiled binaries written in C.</p>
+
+<p>This system is partly taken from the git ecosystem where you can easily add new features to git in pretty much the same way.</p>
+
+<p>A few ideas for this could be:</p>
+
+<ul>
+  <li>A standalone webserver (in progress)</li>
+  <li>A package manager (<code>./saffire package install custom/framework</code>)</li>
+  <li>Other tools that can come in handy while developping or using Saffire.</li>
+</ul>
+
+
+      </section>
+      <footer>
+        
+tactile-theme is maintained by <a href="https://github.com/jasonlong">jasonlang</a><br/>
+jekyll-tactile-theme is maintained by <a href="https://github.com/ankur-gupta">ankur-gupta</a><br/>
+
+      </footer>
+    </div>
+  </div>
+</body>
+
+</html>

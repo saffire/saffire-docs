@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  {%  include head.html %}
+</head>
+
+<body>
+  <div id="container">
+      <img src="http://saffire-lang.org/images/logo.png" align="right">
+    <div class="inner">
+      <header>
+        <h1><a href="{{ site.url }}/">{{ site.name }}</a></h1>
+      </header>
+
+      <section id="main_content">
+        {{ content }}
+      </section>
+      <footer>
+        {%  include footer.html %}
+      </footer>
+    </div>
+  </div>
+</body>
+
+</html>
