@@ -1,3 +1,12 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+
+- [Saffire](#saffire)
+  - [Terminology](#terminology)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 # Saffire
 This documentation is for both myself and others to get an impression on how Saffire works internally.
 

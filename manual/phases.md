@@ -1,3 +1,19 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+
+- [Phases](#phases)
+- [Phase 1: Lexing](#phase-1-lexing)
+- [Phase 2: Parsing](#phase-2-parsing)
+  - [Abstract Syntax Tree](#abstract-syntax-tree)
+    - [AST elements](#ast-elements)
+- [Phase 3: ASM](#phase-3-asm)
+- [Phase 4: Bytecode](#phase-4-bytecode)
+- [Phase X: the missing optimizer](#phase-x-the-missing-optimizer)
+- [Phase 5: The VM](#phase-5-the-vm)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Phases
 Saffire runs in a few different phases, where some of the phases are not yet implemented, some phases are "merged" together, and some phases should be obsoleted in the near future.
 

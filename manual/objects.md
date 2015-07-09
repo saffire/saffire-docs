@@ -1,10 +1,28 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+
+- [Objects](#objects)
+  - [The object header](#the-object-header)
+    - [Object  flags](#object--flags)
+  - [The object footer](#the-object-footer)
+  - [Core objects](#core-objects)
+    - [Object funtions](#object-funtions)
+  - [Initializing the core objects](#initializing-the-core-objects)
+  - [Defining internal methods](#defining-internal-methods)
+    - [Parsing object arguments in internal methods](#parsing-object-arguments-in-internal-methods)
+  - [Instantiating classes (from userland)](#instantiating-classes-from-userland)
+  - [Reference count](#reference-count)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 # Objects
 
 Inside the core, most things are represented by objects. There are not objects in the standard OOP way. From a Saffire userland perspective, we talk about classes and instances instead of classes and objects so not to be confused between core objects and userland objects.
 
 An object is nothing more than a `struct _object` structure which is heavily modelled on Python. This structure can be found in `include/objects/object.h`.
 
-A `t_object` has by default just a header and a footer. It's imperative to use the macro defines for this `SAFFIRE_OBJECT_HEADER` and `SAFFIRE_OBJECT_FOOTER`. This is because these macro's can depend on the way saffire is compiled (with or without debug information for instance).
+A `t_object` has by default just a header and a footer. It's imperative to use the macro defines for this `SAFFIRE_OBJECT_HEADER` and `SAFFIRE_OBJECT_FOOTER`. This is because these macro's can depend on the way saffire is compiled (with or without debug information for instance), but it also allows for much easer changing of all objects. For instance, when adding additional properties or flags (which may or may not happen in the future).
 
 ## The object header
 The header consists of the following:
@@ -225,7 +243,7 @@ Adding constants or properties to core classes work the same way, except it uses
 One thing to realize is that when adding interfaces, you must implement all methods of these interfaces manually, AND add the actual interface with `object_add_interface`. There is no check to see if you have implmented all method for the interface, except when instantiating the class.
 
 
-## defining internal methods
+## Defining internal methods
 
 Internal methods from objects should have the following signature
 
