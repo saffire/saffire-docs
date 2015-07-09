@@ -1,3 +1,4 @@
 highlighter: pygments
 github: [Repository metadata]
-permalink: pretty
+permalink: /:categories/:title.html
+url: http://saffire.github.com/saffire-docs

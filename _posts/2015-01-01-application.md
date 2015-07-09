@@ -2,7 +2,7 @@
 title: Saffire Application
 layout: post
 author: Joshua Thijssen
-category: Application
+category: internals
 date: 2015-01-01 00:01:00
 ---
 
