@@ -20,6 +20,7 @@ I try to be consistent with the terminology through these readings. To make thin
 - Part 2: [Saffire Objects](objects.md)
 - Part 3: [Saffire Execution]
 - Part 4: [Saffire VM]
+- Part 4.1: [Modules](modules.md)
 - Part 5: [Saffire Application](application.md)
 - Part 6: [Saffire Memory Management](smm.md)
 - Part 7: [General functionality](general.md)

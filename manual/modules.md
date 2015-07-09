@@ -1,0 +1,46 @@
+Modules are seen as standalone packages which can either function on it's own as an application, but more likely, be part of a larger application. A module can consist of other modules (which in turn can consist of others etc).
+
+A module can be any of the following:
+
+- A saffire source file `*.sf`.
+- A saffire bytecode file `*.sfc`.
+- A binary module `*.so`.
+
+The first two are relatively easy to create. The third one makes use of the Saffire API system, that allows you to easily create modules in C. This way, you can create extensions to processing things much faster, or just wrap existing C libraries in a Saffire class.
+
+The saffire extensions repository shows a few of these modules, including a hello-world module that can be imported and used.
+
+
+## Namespacing
+
+
+
+## Semantic versioning
+Saffire packages should adhere the semantic versioning (semver) method of `major.minor.build`. For more information, see the [semver website](semver.org).
+
+A complete package url could be something like:
+
+		vendor/json@1.2.3
+		
+Meaning module `json` from vendor `jaytaph` on version `1.2.3`.
+
+
+## Versioning
+There is an issue with package versioning. Suppose we have three modules, `A`, `B` and `C`.
+
+
+Our application uses module `vendor/A@1.0.0` and `vendor/C@1.2.0`.
+
+Now, module A itself requires too module C, however, a different version `2.0.0` for instance.
+
+This can cause issues in resolving our dependencies, as Saffire needs to install both C on version 1.2.0, AND C on version 2.0.0.
+
+We are thinking about resolving this issue by actually installing both packages:
+
+	./modules/vendor/A-1.0.0
+	./modules/vendor/C-1.2.0
+	./modules/vendor/C-2.0.0
+
+Now, all we need to do, is make sure that whenver we import module C inside our code, it uses `C-1.2.0`. When module A imports module C, it must know that we are looking at module C-2.0.0.
+
+This is a big todo, but relatively easy, as we can figure this out during the IMPORT of a module.
