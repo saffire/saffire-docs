@@ -3,7 +3,7 @@ email: jthijssen@saffire-lang.org
 highlighter: pygments
 github: [Repository metadata]
 permalink: /:categories/:title.html
-baseurl: "/saffire-docs/"
+baseurl: "/saffire-docs"
 url: http://saffire.github.com
 github_username: saffire
 twitter_username: "@saffire-lang"

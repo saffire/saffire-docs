@@ -10,7 +10,7 @@ layout: default
             <i class="fa fa-clock-o"></i> {{ page.date | date: "%b %-d, %Y" }}{% if page.author %} -
             <i class="fa fa-user"></i> {{ page.author }}{% endif %} -
             <i class="fa fa-comment"></i>
-            <span class="disqus-comment-count" data-disqus-identifier="{{ site.url }}{{ page.url }}"></span>
+            <span class="disqus-comment-count" data-disqus-identifier="{{ page.url }}"></span>
         </p>
       </header>
       <article>
@@ -23,8 +23,8 @@ layout: default
         <div id="disqus_thread"></div>
         <script type="text/javascript">
             var disqus_shortname = 'saffire-docs';
-            var disqus_identifier = '{{ site.url }}{{ page.url }}';
-            var disqus_url = '{{ site.url }}{{ page.url }}';
+            var disqus_identifier = '{{ page.url }}';
+            var disqus_url = '{{ site.url }}{{ site.baseurl }}{{ page.url }}';
 
             (function() {
                 var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
