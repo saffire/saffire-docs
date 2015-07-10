@@ -4,6 +4,6 @@ highlighter: pygments
 github: [Repository metadata]
 permalink: /:categories/:title.html
 baseurl: "/saffire-docs"
-url: http://saffire.github.com
+url: http://saffire.github.io
 github_username: saffire
 twitter_username: "@saffire-lang"
