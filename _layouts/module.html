@@ -1,0 +1,45 @@
+---
+layout: default
+---
+<div class="row">
+  <div id="myArticle" class="col-sm-9">
+      <div>
+
+    <div class="post-area post">
+      <header>
+        <h1>Module: {{ page.module }}</h1>
+        <p align=right class="post-metadata">
+            <i class="fa fa-clock-o"></i> {{ page.date | date: "%b %-d, %Y" }}{% if page.author %} -
+            <i class="fa fa-user"></i> {{ page.author }}{% endif %} -
+            <i class="fa fa-comment"></i>
+            <span class="disqus-comment-count" data-disqus-identifier="{{ page.url }}"></span>
+        </p>
+      </header>
+      <article>
+
+          {{ page.description }}
+
+          <strong>Classes</strong>
+          <table class="table">
+          {% for class in page.module_classes %}
+            <tr><td><a href="{{ site.baseurl}}/modules/{{ page.module_dir }}/{{ class.dir }}.html">{{page.module}}\{{ class.title }}</a></td><td>{{ class.description }}</td></tr>
+          {% endfor %}
+          </table>
+
+          {% if content != blank %}
+            <hr>
+            {{content}}
+          {% endif %}
+
+      </article>
+      <hr>
+    </div>
+
+{% if site.disqus %}
+    <div class="post-area post comment">
+        {% include disqus.html %}
+    </div>
+{% endif %}
+
+  </div>
+</div>

@@ -10,5 +10,8 @@ layout: default
         {{ content }}
     </article>
 </div>
-<div class="post-area post comment">
-</div>
+{% if site.disqus %}
+    <div class="post-area post comment">
+        {% include disqus.html %}
+    </div>
+{% endif %}

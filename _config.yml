@@ -7,3 +7,4 @@ baseurl: "/saffire-docs"
 url: http://saffire.github.io
 github_username: saffire
 twitter_username: "@saffire-lang"
+disqus: true
