@@ -6,15 +6,15 @@ category: internals
 date: 2015-01-01 00:01:00        
 ---
 <p>
-    This is some documentation about using saffire, mostly describing modules and some internals
+    This is some documentation about using saffire, mostly describing modules and some internals.
 </p>
 
 <h2>Modules</h2>
-<ul class="content">
-{% for post in site.categories.modules reversed %}
-  <li><a href="{{ post.url | prepend: site.baseurl }}">{{ post.module }}</a></li>
+<table class="table table-condensed table-striped table-bordered">
+{% for post in site.categories.modules %}
+  <tr><td><a href="{{ post.url | prepend: site.baseurl }}">{{ post.module }}</a></td><td>{{ post.short_description }}</td></tr>
 {% endfor %}
-</ul>
+</table>
 
 
 <h2>Internals: Table of Contents</h2>

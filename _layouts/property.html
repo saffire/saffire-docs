@@ -7,7 +7,7 @@ layout: default
 
     <div class="post-area post">
       <header>
-        <h1>Module: {{ page.module }}</h1>
+        <h1>Property: <a href="{{ site.baseurl }}/module/{{page.module}}.html">\{{ page.module}}</a><a href="{{ site.baseurl }}/module/{{page.module}}/class/{{page.class}}.html">\{{ page.class}}</a>.{{ page.property}}</h1>
         <p align=right class="post-metadata">
             <i class="fa fa-clock-o"></i> {{ page.date | date: "%b %-d, %Y" }}{% if page.author %} -
             <i class="fa fa-user"></i> {{ page.author }}{% endif %} -
@@ -19,12 +19,11 @@ layout: default
 
           {{ page.description }}
 
-          <strong>Classes</strong>
-          <table class="table">
-          {% for class in page.module_classes %}
-            <tr><td><a href="{{ site.baseurl}}/module/{{ page.module }}{{ class.module }}/class/{{ class.dir }}.html">{{page.module}}\{{ class.title }}</a></td><td>{{ class.description }}</td></tr>
-          {% endfor %}
-          </table>
+          <strong>Type</strong>
+
+          <code>
+              {{ page.type }}
+          </code>
 
           {% if content != blank %}
             <hr>
@@ -35,11 +34,11 @@ layout: default
       <hr>
     </div>
 
-{% if site.disqus %}
-    <div class="post-area post comment">
-        {% include disqus.html %}
-    </div>
-{% endif %}
+  {% if site.disqus %}
+      <div class="post-area post comment">
+          {% include disqus.html %}
+      </div>
+  {% endif %}
 
   </div>
 </div>
